@@ -94,7 +94,7 @@ class AspectRatioBucket:
             resolutions.append((w, h))
             aspects.append(float(w)/float(h))
             h += self.div
-            
+
         res_map = {}
         for i, res in enumerate(resolutions):
             res_map[res] = aspects[i]
@@ -133,7 +133,7 @@ class AspectRatioBucket:
         if self.debug:
             timer = time.perf_counter() - timer
             self.aspect_errors = np.array(self.aspect_errors)
-            
+
             try:
                 print(f"skipped images: {skipped}")
                 print(f"aspect error: mean {self.aspect_errors.mean()}, median {np.median(self.aspect_errors)}, max {self.aspect_errors.max()}")
@@ -174,20 +174,20 @@ class AspectRatioBucket:
                 self.prng.shuffle(self.epoch[bucket_id])
                 self.epoch[bucket_id] = list(self.epoch[bucket_id])
                 overhang = len(self.epoch[bucket_id]) % self.bsz
-                
+
                 if overhang != 0:
                     # random repeat to fulfill batch size
                     # 学習時はステップ数がランダムなので、同一画像が同一batch内にあってもそれほど悪影響はないであろう、と考えられる
                     length_to_repeat = self.bsz - overhang
                     items = np.random.choice(self.epoch[bucket_id], length_to_repeat)
                     self.epoch[bucket_id].extend(items)
-                    
+
         if self.debug:
             timer = time.perf_counter() - timer
             count = 0
             for bucket_id in self.epoch.keys():
                 count += len(self.epoch[bucket_id])
-                
+
             print(f"correct item count: {count == len(index)} ({count} of {len(index)})")
             print(f"start_epoch: {timer:.5f}s")
 

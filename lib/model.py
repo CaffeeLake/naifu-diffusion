@@ -45,7 +45,7 @@ def get_pipeline(model_path):
         pipeline = convert_to_df(checkpoint, return_pipe=True)
     else:
         pipeline = StableDiffusionPipeline.from_pretrained(model_path)
-        
+
     return pipeline
 
 def min_snr_weighted_loss(eps_pred:torch.Tensor, eps:torch.Tensor, timesteps, noise_scheduler, snr_gamma):
@@ -91,11 +91,11 @@ class StableDiffusionModel(pl.LightningModule):
         self.lr = self.config.optimizer.params.lr
         self.batch_size = batch_size if batch_size > 0 else self.config.trainer.batch_size
         self.init_model()
-        
+
     def init_model(self):
         config = self.config
         self.pipeline.set_progress_bar_config(disable=True)
-        
+
         self.is_sdxl = False
         if isinstance(self.pipeline, StableDiffusionPipeline):
             self.unet, self.vae, self.text_encoder = self.pipeline.unet, self.pipeline.vae, self.pipeline.text_encoder
@@ -119,7 +119,7 @@ class StableDiffusionModel(pl.LightningModule):
 
         if hasattr(self, "vae"):
             self.vae.requires_grad_(False)
-            
+
         if config.trainer.get("train_text_encoder"):
             self.text_encoder.train()
             self.text_encoder.requires_grad_(True)
@@ -197,13 +197,13 @@ class StableDiffusionModel(pl.LightningModule):
             persistent_workers=True,
         )
         return dataloader
-    
+
     def encode_tokens_xl(self, batch):
         time_ids_list = []
         for o, t, c in zip(batch["original_size_as_tuple"], batch["target_size_as_tuple"], batch["crop_coords_top_left"]):
             add_time_ids = torch.tensor([list(o + t + c)])
             time_ids_list.append(add_time_ids)
-        
+
         time_ids_list = torch.cat(time_ids_list, dim=0).to(self.device)
         text_encoders = [self.pipeline.text_encoder, self.pipeline.text_encoder_2]
         tokenizers = [self.pipeline.tokenizer, self.pipeline.tokenizer_2]
@@ -238,10 +238,10 @@ class StableDiffusionModel(pl.LightningModule):
     def encode_tokens(self, prompts, tokenizer=None):
         if tokenizer is None:
             tokenizer = self.tokenizer
-            
-        input_ids = self.tokenizer(prompts, padding="do_not_pad", truncation=True, max_length=225).input_ids 
+
+        input_ids = self.tokenizer(prompts, padding="do_not_pad", truncation=True, max_length=225).input_ids
         input_ids = tokenizer.pad({"input_ids": input_ids}, padding=True, return_tensors="pt").input_ids
-        
+
         z = []
         if input_ids.shape[1] > 77:
             # todo: Handle end-of-sentence truncation
@@ -296,10 +296,10 @@ class StableDiffusionModel(pl.LightningModule):
         else:
             encoder_hidden_states = self.encode_tokens(prompts)
             encoder_hidden_states = encoder_hidden_states.to(self.unet.dtype)
-            
+
         if not self.use_latent_cache:
             latents = self.encode_pixels(latents)
-        
+
         # Cast to the correct dtype
         latents = latents.to(self.unet.dtype)
 
@@ -383,7 +383,7 @@ class StableDiffusionModel(pl.LightningModule):
             rank_zero_print(f"Using scaled LR: {self.config.optimizer.params.lr}")
 
         params_to_optim = [{'params': self.unet.parameters()}]
-        
+
         if self.config.trainer.get("train_text_encoder") == True:
             text_encoder_group = {'params': self.text_encoder.parameters()}
             if self.config.trainer.get("text_encoder_lr"):
@@ -399,13 +399,13 @@ class StableDiffusionModel(pl.LightningModule):
         )
         if "transformers" in self.config.lr_scheduler.name:
             scheduler = {'scheduler': scheduler, 'interval': 'step', 'frequency': 1}
-            
+
         return [[optimizer], [scheduler]]
 
     def on_train_start(self):
         if self.config.get("cast_vae_fp32", True) and hasattr(self, "vae"):
             self.vae.to(torch.float32)
-        
+
         if self.config.trainer.use_ema:
             self.ema.to(self.device, dtype=self.unet.dtype)
 
@@ -418,14 +418,14 @@ class StableDiffusionModel(pl.LightningModule):
             self.trainer.strategy.barrier()
             if not allclose:
                 self.dataset.update_cache_index(cache_dir, self.local_rank)
-                    
+
             # wait for all processes to finish combining the cache
             self.trainer.strategy.barrier()
 
     def on_train_epoch_start(self) -> None:
         if self.use_latent_cache and hasattr(self, "vae"):
             self.vae.to("cpu")
-            
+
         if self.is_sdxl:
             self.text_encoder.to("cpu")
             self.text_encoder_2.to("cpu")
@@ -438,7 +438,7 @@ class StableDiffusionModel(pl.LightningModule):
         state_dict = checkpoint["state_dict"]
         if not self.is_sdxl:
             state_dict = convert_to_sd(checkpoint["state_dict"])
-            
+
         if self.config.checkpoint.get("extended"):
             if self.config.checkpoint.extended.save_fp16_weights:
                 state_dict = {k: v.to(torch.float16) for k, v in state_dict.items()}
@@ -460,7 +460,7 @@ class StableDiffusionModel(pl.LightningModule):
             self.unet.load_state_dict(unet_sd)
             self.vae.load_state_dict(vae_sd)
             self.text_encoder.load_state_dict(te_sd)
-            
+
         checkpoint["state_dict"] = {}
         if self.config.trainer.use_ema:
             self.ema.load_state_dict(checkpoint["model_ema"])

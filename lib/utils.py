@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 import requests
 import torch
 from transformers import (
-    CLIPTextModel, 
+    CLIPTextModel,
     CLIPTextConfig,
     CLIPTokenizer
 )
@@ -46,14 +46,14 @@ def get_world_size() -> int:
     # if config is not None and config.lightning.accelerator == "tpu":
     #     import torch_xla.core.xla_model as xm
     #     return xm.xrt_world_size()
-    
+
     return int(os.environ.get("WORLD_SIZE", 1))
 
 def get_local_rank() -> int:
     # if config.lightning.accelerator == "tpu":
     #     import torch_xla.core.xla_model as xm
     #     return xm.get_ordinal()
-    
+
     return int(os.environ.get("LOCAL_RANK", -1))
 
 def state_dict_key_replace(state_dict, keys_to_replace):
@@ -74,7 +74,7 @@ def convert_to_sd(state_dict):
     vae_state_dict = {k.replace("vae.", "", 1): v for k, v in state_dict.items() if k.startswith("vae")}
     text_enc_dict = {k.replace("text_encoder.", "", 1): v for k, v in state_dict.items() if k.startswith("text_encoder")}
     text_enc_dict_2 = {k.replace("text_encoder_2.", "", 1): v for k, v in state_dict.items() if k.startswith("text_encoder_2")}
-        
+
     # Convert the UNet model
     unet_state_dict = diffusers_convert.convert_unet_state_dict(unet_state_dict)
     unet_state_dict = {"model.diffusion_model." + k: v for k, v in unet_state_dict.items()}
@@ -94,7 +94,7 @@ def convert_to_sd(state_dict):
     else:
         text_enc_dict = diffusers_convert.convert_text_enc_state_dict(text_enc_dict)
         text_enc_dict = {"cond_stage_model.transformer." + k: v for k, v in text_enc_dict.items()}
-        
+
     if len(text_enc_dict_2) > 0:
         pass
 
@@ -105,7 +105,7 @@ def convert_to_df(checkpoint, return_pipe=False):
     key_name_v2_1 = "model.diffusion_model.input_blocks.2.1.transformer_blocks.0.attn2.to_k.weight"
     key_name_sd_xl_base = "conditioner.embedders.1.model.transformer.resblocks.9.mlp.c_proj.bias"
     key_name_sd_xl_refiner = "conditioner.embedders.0.model.transformer.resblocks.9.mlp.c_proj.bias"
-    
+
     global_step = None
     if "global_step" in checkpoint:
         global_step = checkpoint["global_step"]
@@ -129,7 +129,7 @@ def convert_to_df(checkpoint, return_pipe=False):
 
     original_config_file = BytesIO(requests.get(config_url).content)
     original_config = OmegaConf.load(original_config_file)
-    
+
     # Convert the text model.
     if (
         "cond_stage_config" in original_config.model.params
@@ -141,7 +141,7 @@ def convert_to_df(checkpoint, return_pipe=False):
             model_type = "SDXL"
         else:
             model_type = "SDXL-Refiner"
-        image_size = 1024 
+        image_size = 1024
 
     if (
         "parameterization" in original_config["model"]["params"]
@@ -157,7 +157,7 @@ def convert_to_df(checkpoint, return_pipe=False):
             image_size = 512 if global_step == 875000 else 768
     else:
         prediction_type = "epsilon"
-        image_size = 512 
+        image_size = 512
 
     num_train_timesteps = getattr(original_config.model.params, "timesteps", None) or 1000
     if model_type in ["SDXL", "SDXL-Refiner"]:
@@ -214,12 +214,12 @@ def convert_to_df(checkpoint, return_pipe=False):
                 if "text_model" not in dest_key:
                     dest_key = f"text_model.{dest_key}"
                 text_model_dict[dest_key] = checkpoint[key]
-        
+
         text_model = CLIPTextModel(CLIPTextConfig.from_pretrained("openai/clip-vit-large-patch14"))
         tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
         if "text_model.embeddings.position_ids" not in text_model.state_dict().keys() \
             and "text_model.embeddings.position_ids" in text_model_dict.keys():
-            del text_model_dict["text_model.embeddings.position_ids"] 
+            del text_model_dict["text_model.embeddings.position_ids"]
 
         if len(text_model_dict) < 10:
             text_model = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14")
@@ -228,16 +228,16 @@ def convert_to_df(checkpoint, return_pipe=False):
         text_encoder = None
         tokenizer_2 = CLIPTokenizer.from_pretrained("laion/CLIP-ViT-bigG-14-laion2B-39B-b160k", pad_token="!")
         text_encoder_2 = convert_open_clip_checkpoint(
-            checkpoint, 
+            checkpoint,
             config_name="laion/CLIP-ViT-bigG-14-laion2B-39B-b160k",
             prefix="conditioner.embedders.1.model." if model_type == "SDXL" else "conditioner.embedders.0.model.",
-            has_projection=True, 
+            has_projection=True,
             projection_dim=1280,
         )
         if model_type == "SDXL":
             tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
             text_encoder = convert_ldm_clip_checkpoint(checkpoint)
-    
+
     if not return_pipe:
         if model_type in ["SDXL", "SDXL-Refiner"]:
             return converted_unet_checkpoint, converted_vae_checkpoint, text_encoder, text_encoder_2
@@ -247,7 +247,7 @@ def convert_to_df(checkpoint, return_pipe=False):
         vae = AutoencoderKL(**vae_config)
         vae.load_state_dict(converted_vae_checkpoint)
         unet.load_state_dict(converted_unet_checkpoint)
-        
+
         if model_type in ["SDXL", "SDXL-Refiner"]:
             return StableDiffusionXLPipeline(
                 vae=vae,

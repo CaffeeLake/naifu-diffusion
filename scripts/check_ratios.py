@@ -48,10 +48,10 @@ def arb_transform(source_size, size):
 
 def build_ratio_counter(x, buckets, show_path=False):
     b = sorted(buckets.keys())
-    
+
     def closest_bucket(x, y):
         return b[min(range(len(b)), key=lambda i: abs(b[i] - x / y),)]
-    
+
     arb_counter = dict()
     for img_path in Path(x).glob("*.*"):
         if img_path.suffix not in [".jpg", ".png", ".bmp"]:
@@ -62,7 +62,7 @@ def build_ratio_counter(x, buckets, show_path=False):
         arb_counter[ratio] = 1 if ratio not in arb_counter else arb_counter[ratio]+1
         if show_path:
             print(f"{img_path} ({x}, {y}) -> {buckets[ratio]}")
-        
+
     return arb_counter
 
 def main():
@@ -86,16 +86,16 @@ def main():
     aspects = gen_buckets()
     for x, y in aspects:
         buckets[x / y] = (x, y)
-    
+
     i_ratios = build_ratio_counter(args.i, buckets, args.show_path)
     print(f"Summary: {args.i}")
-    for k, v in i_ratios.items(): print(f"{buckets[k]}: {v} images") 
-    
+    for k, v in i_ratios.items(): print(f"{buckets[k]}: {v} images")
+
     if args.c:
         c_ratios = build_ratio_counter(args.c, buckets, args.show_path)
         print(f"Summary: {args.c}")
         for k, v in c_ratios.items(): print(f"{buckets[k]}: {v} images")
-        
+
         print("transforms:")
         i_len = len(list(Path(args.i).glob("*.*")))
         c_len = len(list(Path(args.c).glob("*.*")))

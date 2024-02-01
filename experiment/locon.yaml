@@ -8,20 +8,20 @@ lora:
   conv_alpha: 16
   multipier: 1.0
   train_unet: true
-  train_text_encoder: true
+  train_text_encoder: false
   unet_lr: 3e-4
   encoder_lr: 1e-4
   dropout: 0.0
 
 trainer:
-  model_path: "/notebooks/storage/webui/models/Stable-diffusion/Counterfeit-V2.0.ckpt"
-  batch_size: 2
+  model_path: "./checkpoint/"
+  batch_size: 1
   resolution: 512
   center_crop: false
   gradient_checkpointing: true
   clip_skip: 2
-  seed: 34
-  precision: fp32
+  seed: 65535
+  precision: fp16
   use_ema: false
   use_hivemind: false
   lr_scale: sqrt
@@ -32,16 +32,16 @@ trainer:
   offset_noise_val: 0.02
   min_snr: true
   min_snr_val: 5
-  use_xformers: false
+  use_xformers: true
 
 checkpoint:
-  monitor: 'epoch'
+  monitor: "epoch"
   dirpath: checkpoint
-  filename: 'sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}'
+  filename: "locon-epoch{epoch:02d}-loss{train_loss:.6f}"
   auto_insert_metric_name: false
-  every_n_epochs: 3
-  save_top_k: 3
-  mode: 'max'
+  every_n_epochs: 1
+  save_top_k: -1
+  mode: "max"
   save_last: false
 
 lightning:
@@ -49,21 +49,21 @@ lightning:
   devices: -1
   auto_select_gpus: true
   # limit_train_batches: 100
-  max_epochs: 40
-  precision: bf16-true
+  max_epochs: 20
+  precision: bf16-mixed
   log_every_n_steps: 1
-  accumulate_grad_batches: 1
+  accumulate_grad_batches: 2
 
 dataset:
-  img_path: "/notebooks/PVC-XL"
+  img_path: "../styles/"
   tag_processor: data.processors.shuffle_prompts
   center_crop: false
-  ucg: 0.1
+  ucg: 0.0
   debug_arb: false
   process_tags: false
   cache_latents: false
-  # cache_bsz: 8
-  # cache_dir: cache
+  cache_bsz: 8
+  cache_dir: cache
 
 optimizer:
   name: torch.optim.AdamW
@@ -75,9 +75,10 @@ optimizer:
     eps: 1e-7
 
 lr_scheduler:
-  name: transformers.get_constant_schedule_with_warmup
+  name: transformers.get_constant_schedule
   params:
-    num_warmup_steps: 50
+    # num_warmup_steps: 10
+    # num_training_steps: 100
     last_epoch: -1
 
 monitor:
@@ -87,30 +88,29 @@ monitor:
   store_checkpoints: true
 
 sampling:
-  enabled: true
+  enabled: false
   use_wandb: true
   every_n_steps: -1
   every_n_epochs: 1
   save_dir: "samples"
-  seed: 1432
+  seed: 65535
   height: 512
   width: 512
-  steps: 28
-  cfg_scale: 9
-  negative_prompts: 
-    - "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
-  prompts: 
-    - "masterpiece, best quality, 1girl, oyama mahiro"
+  steps: 25
+  cfg_scale: 15
+  negative_prompts:
+    - ""
+  prompts:
+    - ""
 
 # arb config will be calculated automatically if not specified
 # to override, uncomment and specify values
-#
-# arb:
-#   enabled: false
-#   debug: false
-#   base_res: [512, 512]
-#   max_size: [768, 512]
-#   divisible: 64
-#   max_ar_error: 4
-#   min_dim: 256
-#   dim_limit: 1024
+arb:
+  enabled: false
+  debug: false
+  base_res: [512, 512]
+  max_size: [768, 512]
+  divisible: 64
+  max_ar_error: 4
+  min_dim: 256
+  dim_limit: 1024

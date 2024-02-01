@@ -1,0 +1,16 @@
+accelerate
+bitsandbytes
+dadaptation
+diffusers
+ftfy
+h5py
+lightning
+lightning_lite
+omegaconf
+safetensors
+tensorboard
+timm
+torch-ema
+transformers
+wandb
+xformers

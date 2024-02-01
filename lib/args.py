@@ -13,8 +13,8 @@ def parse_args():
         help="Path to pretrained model or model identifier from huggingface.co/models.",
     )
     parser.add_argument(
-        "--config", 
-        type=str, 
+        "--config",
+        type=str,
         default="train.yaml"
     )
     parser.add_argument(
@@ -31,7 +31,7 @@ def parse_args():
     )
 
     args = parser.parse_args()
-    
+
     if args.config != None and args.config.startswith("https://"):
         print(f"Downloading config {args.config}...")
         r = requests.get(args.config, stream=True)

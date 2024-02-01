@@ -101,7 +101,7 @@ def main(args):
 
     if config.lightning.get("enable_checkpointing") == None:
         config.lightning.enable_checkpointing = enable_checkpointing
-        
+
     plugins = None
     target_precision = config.lightning.precision
     if target_precision in ["16-true", "bf16-true"]:
@@ -112,10 +112,10 @@ def main(args):
     # config.lightning.replace_sampler_ddp = False
     config, callbacks = pl_compat_fix(config, callbacks)
     trainer = pl.Trainer(
-        logger=logger, 
-        callbacks=callbacks, 
-        strategy=strategy, 
-        plugins=plugins, 
+        logger=logger,
+        callbacks=callbacks,
+        strategy=strategy,
+        plugins=plugins,
         **config.lightning
     )
     trainer.fit(model=model, ckpt_path=args.resume if args.resume else None)

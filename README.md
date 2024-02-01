@@ -4,7 +4,7 @@ Naifu Diffusion is the name for this project of finetuning Stable Diffusion on i
 
 This branch is aiming to train stable diffusion model stably with diffusers. To make use of all new features, such as SDXL Training and efficient/experiment strategies, checkout sgm branch.
 
-Colab demo: https://colab.research.google.com/drive/1Xf1tnsP4fu8y5MoYbK1pz08jmyMiTrvv
+Colab demo: <https://colab.research.google.com/drive/1Xf1tnsP4fu8y5MoYbK1pz08jmyMiTrvv>
 
 ## Features
 
@@ -23,7 +23,7 @@ The trainer has integrated several features:
 Clone repo
 
 ```bash
-git clone https://github.com/Mikubill/naifu-diffusion
+git clone https://github.com/CaffeeLake/naifu-diffusion.git -b dev
 cd naifu-diffusion
 ```
 
@@ -35,7 +35,8 @@ conda env create -f environment.yaml
 conda activate nd
 
 # OR by pip
-pip install -r requirements.txt
+pip install -r requirements0.txt --index-url https://download.pytorch.org/whl/cu118
+pip install -r requirements1.txt
 ```
 
 Start training.
@@ -52,7 +53,7 @@ Train [LoRA](https://arxiv.org/abs/2106.09685)
 ```bash
 python trainer.py --config experiment/lora.yaml
 
-## extract 
+## extract
 python experiment/extract_lora.py --src last.ckpt
 ```
 
@@ -61,7 +62,7 @@ Train [LoCon](https://github.com/KohakuBlueleaf/LoCon)
 ```bash
 python trainer.py --config experiment/locon.yaml
 
-## extract 
+## extract
 python experiment/extract_lora.py --src last.ckpt
 ```
 
@@ -72,6 +73,7 @@ python trainer.py --config experiment/textual_inversion.yaml
 ```
 
 Convert any checkpoint to safetensors
+
 ```bash
 python scripts/sd_to_safetensors.py --src input.ckpt --dst output.safetensors
 ```

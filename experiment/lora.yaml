@@ -32,13 +32,13 @@ trainer:
   use_xformers: true
 
 checkpoint:
-  monitor: 'epoch'
+  monitor: "epoch"
   dirpath: checkpoint
-  filename: 'sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}'
+  filename: "sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}"
   auto_insert_metric_name: false
   every_n_epochs: 4
   save_top_k: 1
-  mode: 'max'
+  mode: "max"
   save_last: true
 
 lightning:
@@ -93,11 +93,10 @@ sampling:
   width: 512
   steps: 28
   cfg_scale: 9
-  negative_prompts: 
+  negative_prompts:
     - "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
-  prompts: 
+  prompts:
     - "masterpiece, best quality, 1girl, kitagawa_marin"
-  
 # arb config will be calculated automatically if not specified
 # to override, uncomment and specify values
 #

@@ -105,7 +105,7 @@ def convert_unet_state_dict(unet_state_dict, is_v2):
             v = v.replace(hf_part, sd_part)
         mapping[k] = v
     new_state_dict = {v: unet_state_dict[k] for k, v in mapping.items()}
-    
+
     if is_v2:
         keys = list(new_state_dict.keys())
         tf_keys = ["proj_in.weight", "proj_out.weight"]
@@ -178,7 +178,7 @@ def convert_vae_state_dict(vae_state_dict):
         for sd_part, hf_part in vae_conversion_map:
             v = v.replace(hf_part, sd_part)
         mapping[k] = v
-    
+
     for k, v in mapping.items():
         if "attentions" in k:
             for sd_part, hf_part in vae_conversion_map_attn:
@@ -186,7 +186,7 @@ def convert_vae_state_dict(vae_state_dict):
             mapping[k] = v
     new_state_dict = {v: vae_state_dict[k] for k, v in mapping.items()}
     weights_to_convert = ["q", "k", "v", "proj_out"]
-    
+
     for k, v in new_state_dict.items():
         for weight_name in weights_to_convert:
             if f"mid.attn_1.{weight_name}.weight" in k:
@@ -277,10 +277,10 @@ def convert_text_enc_state_dict(text_enc_dict):
 
 def weight_apply_lora(model, loras, alpha=1.0):
     target_replace_module = ["CrossAttention", "Attention", "GEGLU"]
-    
+
     for _module in model.modules():
         if _module.__class__.__name__ not in target_replace_module:
-            continue 
+            continue
         for child in _module.modules():
             if child.__class__.__name__ == "Linear":
 
@@ -313,12 +313,12 @@ if __name__ == "__main__":
         state_dict = torch.load(args.src, map_location="cpu")
         if args.use_ema:
             ema_weights = state_dict["model_ema"]
-        
+
         state_dict = state_dict["state_dict"]
         unet_state_dict = {k.replace("unet.", "", 1): v for k, v in state_dict.items() if k.startswith("unet")}
         vae_state_dict = {k.replace("vae.", "", 1): v for k, v in state_dict.items() if k.startswith("vae")}
         text_enc_dict = {k.replace("text_encoder.", "", 1): v for k, v in state_dict.items() if k.startswith("text_encoder")}
-        
+
         if args.use_ema:
             # rebuild unet from weights
             from diffusers import UNet2DConditionModel
@@ -329,7 +329,7 @@ if __name__ == "__main__":
             unet_ema.load_state_dict(ema_weights)
             unet_ema.copy_to(unet.parameters())
             unet_state_dict = unet.state_dict()
-            
+
         if args.use_lora:
             unet = UNet2DConditionModel.from_config(args.base, subfolder="unet")
             unet.load_state_dict(unet_state_dict)
@@ -363,6 +363,6 @@ if __name__ == "__main__":
     state_dict = {**unet_state_dict, **vae_state_dict, **text_enc_dict} if not args.unet_only else {**unet_state_dict}
     if args.half:
         state_dict = {k: v.half() for k, v in state_dict.items()}
-        
+
     state_dict = {"state_dict": state_dict}
     torch.save(state_dict, args.dst)

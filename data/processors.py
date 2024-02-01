@@ -9,20 +9,20 @@ def shuffle_prompts(prompt, separator=",", start="Tags:", offset=3):
     except ValueError:
         start = ""
         index = 0
-        
+
     if len(prompt) == 0:
         return prompt, False
-        
-    subprompt = prompt[index + len(start):] 
+
+    subprompt = prompt[index + len(start):]
     tags = subprompt.split(separator)
     preserved, tags = tags[:offset], tags[offset:]
-    
-    random.shuffle(tags) 
+
+    random.shuffle(tags)
     out = prompt[:index] + start + separator.join(preserved + tags)
     return out, False
-    
+
 def nai_tag_processor(tags, min_tags=24, max_tags=72, type_dropout=0.75, keep_important=1.00, keep_jpeg_artifacts=True, sort_tags=False) -> str:
-    
+
     if isinstance(tags, str):
         tags = tags.replace(",", " ").split(" ")
         tags = [tag.strip() for tag in tags if tag != ""]
@@ -40,7 +40,7 @@ def nai_tag_processor(tags, min_tags=24, max_tags=72, type_dropout=0.75, keep_im
     base_chosen = []
     skip_image = False
     # counts = [0]
-    
+
     for tag in tag_dict.keys():
         # For danbooru tags.
         parts = tag.split(":", 1)

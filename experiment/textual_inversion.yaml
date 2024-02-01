@@ -2,20 +2,20 @@ name: test-run
 
 custom_embeddings:
   enabled: false
-  weights_path: 
+  weights_path:
   load_all: false
   train_all: false
   use_wandb: false
   freeze_unet: false
   trainer:
-    save_path: 
+    save_path:
     lr: 1e-3
     max_epochs: -1
     every_n_epochs: 1
     every_n_steps: -1
-  concepts: 
-    freeze: [aoaoko, aqua, bbss] 
-    trainable: [momoko, ao, crosschan, nyanko:2v, rcins:11v] 
+  concepts:
+    freeze: [aoaoko, aqua, bbss]
+    trainable: [momoko, ao, crosschan, nyanko:2v, rcins:11v]
 
 trainer:
   model_path: "../animesfw"
@@ -40,13 +40,13 @@ trainer:
   use_xformers: false
 
 checkpoint:
-  monitor: 'epoch'
+  monitor: "epoch"
   dirpath: checkpoint
-  filename: 'sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}'
+  filename: "sample-nd-epoch{epoch:02d}-loss{train_loss:.2f}"
   auto_insert_metric_name: false
   every_n_epochs: 3
   save_top_k: 3
-  mode: 'max'
+  mode: "max"
   save_last: true
 
 lightning:
@@ -71,7 +71,7 @@ arb:
   dim_limit: 1024
 
 dataset:
-  img_path: 
+  img_path:
     - "https://pub-2fdef7a2969f43289c42ac5ae3412fd4.r2.dev/mmk.tgz"
   center_crop: false
   ucg: 0.1
@@ -118,15 +118,14 @@ sampling:
   width: 512
   steps: 20
   cfg_scale: 9
-  negative_prompts: 
+  negative_prompts:
     - "lowres, bad anatomy, text, error, extra digit, cropped"
     - "lowres, low quality"
-  prompts: 
+  prompts:
     - "a girl running fast on the country lane"
     - "a girl in black serafuku standing in a field. Tags: solo, food, fruit, lemon, masterpiece"
 
 encoder:
   # Leave blank to load from model
-  text: 
-  vae: 
-  
+  text:
+  vae:

@@ -55,7 +55,7 @@ class WDInterrogator():
         self.model_path = model_path
         self.tags_path = tags_path
         self.kwargs = kwargs
-        
+
     def load(self):
         model_path, tags_path = self.download()
         self.model = InferenceSession(str(model_path), providers=["CUDAExecutionProvider"])
@@ -66,13 +66,13 @@ class WDInterrogator():
             ['genderswap', 'genderswap_(mtf)', 'genderswap_(ftm)', 'ambiguous_gender']
         )
         print(f"Loaded {self.name} model from {model_path}")
-    
+
     def download(self):
         print(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
         model_path = Path(hf_hub_download(**self.kwargs, filename=self.model_path))
         tags_path = Path(hf_hub_download(**self.kwargs, filename=self.tags_path))
         return model_path, tags_path
-    
+
     def postprocess_tags(
         self,
         tags: Dict[str, float],
@@ -87,7 +87,7 @@ class WDInterrogator():
     ) -> Dict[str, float]:
         for t in additional_tags:
             tags[t] = 1.0
-        
+
         # remove useless tags
         for t in self.useless_tags:
             if t in tags:
@@ -127,7 +127,7 @@ class WDInterrogator():
     def interrogate(self, image):
         if not hasattr(self, 'model') or self.model is None:
             self.load()
-            
+
         # convert an image to fit the model
         _, height, _, _ = self.model.get_inputs()[0].shape
 
@@ -169,8 +169,8 @@ interrogators = {
         revision="v2.0",
     ),
     "wd14-vit-v2": WDInterrogator(
-        "wd14-vit-v2", 
-        repo_id="SmilingWolf/wd-v1-4-vit-tagger-v2", 
+        "wd14-vit-v2",
+        repo_id="SmilingWolf/wd-v1-4-vit-tagger-v2",
         revision="v2.0"
     ),
     "wd14-convnext-v2": WDInterrogator(
@@ -188,23 +188,23 @@ interrogators = {
         repo_id="SmilingWolf/wd-v1-4-convnextv2-tagger-v2",
     ),
     "wd14-vit-v2-git": WDInterrogator(
-        "wd14-vit-v2-git", 
+        "wd14-vit-v2-git",
         repo_id="SmilingWolf/wd-v1-4-vit-tagger-v2"
     ),
     "wd14-convnext-v2-git": WDInterrogator(
-        "wd14-convnext-v2-git", 
+        "wd14-convnext-v2-git",
         repo_id="SmilingWolf/wd-v1-4-convnext-tagger-v2"
     ),
     "wd14-swinv2-v2-git": WDInterrogator(
-        "wd14-swinv2-v2-git", 
+        "wd14-swinv2-v2-git",
         repo_id="SmilingWolf/wd-v1-4-swinv2-tagger-v2"
     ),
     "wd14-vit": WDInterrogator(
-        "wd14-vit", 
+        "wd14-vit",
         repo_id="SmilingWolf/wd-v1-4-vit-tagger"
     ),
     "wd14-convnext": WDInterrogator(
-        "wd14-convnext", 
+        "wd14-convnext",
         repo_id="SmilingWolf/wd-v1-4-convnext-tagger"
     ),
     "wd-v1-4-moat-tagger-v2": WDInterrogator(
@@ -217,18 +217,18 @@ if __name__ == "__main__":
     # give a path to folder with images, use tqdm for progress bar
     args = argparse.ArgumentParser()
     args.add_argument("--path", type=str, default="/notebooks")
-    args.add_argument("--interrogator", type=str, default="wd14-swinv2-v2")
+    args.add_argument("--interrogator", type=str, default="wd-v1-4-moat-tagger-v2")
     args.add_argument("--threshold", type=float, default=0.5)
     args.add_argument("--prefix", type=str, default="")
     args = args.parse_args()
-    
+
     # iter args.path
     for path in tqdm(os.listdir(args.path)):
         imgpath = os.path.join(args.path, path)
         name, ext = os.path.splitext(os.path.basename(imgpath))
         if ext not in [".jpg", ".png", ".jpeg", ".webp"]:
             continue
-        
+
         interrogator = interrogators[args.interrogator]
         ratings, tags = interrogator.interrogate(Image.open(imgpath))
         tags = interrogator.postprocess_tags(tags, threshold=args.threshold)

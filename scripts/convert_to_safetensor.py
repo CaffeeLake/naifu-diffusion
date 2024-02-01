@@ -105,7 +105,7 @@ def convert_unet_state_dict(unet_state_dict, is_v2):
             v = v.replace(hf_part, sd_part)
         mapping[k] = v
     new_state_dict = {v: unet_state_dict[k] for k, v in mapping.items()}
-    
+
     if is_v2:
         keys = list(new_state_dict.keys())
         tf_keys = ["proj_in.weight", "proj_out.weight"]
@@ -180,7 +180,7 @@ def convert_vae_state_dict(vae_state_dict):
         for sd_part, hf_part in vae_conversion_map:
             v = v.replace(hf_part, sd_part)
         mapping[k] = v
-    
+
     for k, v in mapping.items():
         if "attentions" in k:
             for sd_part, hf_part in vae_conversion_map_attn:
@@ -188,7 +188,7 @@ def convert_vae_state_dict(vae_state_dict):
             mapping[k] = v
     new_state_dict = {v: vae_state_dict[k] for k, v in mapping.items()}
     weights_to_convert = ["q", "k", "v", "proj_out"]
-    
+
     for k, v in new_state_dict.items():
         for weight_name in weights_to_convert:
             if f"mid.attn_1.{weight_name}.weight" in k:
@@ -294,12 +294,12 @@ if __name__ == "__main__":
         state_dict = torch.load(args.src, map_location="cpu")
         if args.use_ema:
             ema_weights = state_dict["model_ema"]
-        
+
         state_dict = state_dict["state_dict"] if "state_dict" in state_dict else state_dict
         unet_state_dict = {k.replace("unet.", "", 1): v for k, v in state_dict.items() if k.startswith("unet")}
         vae_state_dict = {k.replace("vae.", "", 1): v for k, v in state_dict.items() if k.startswith("vae")}
         text_enc_dict = {k.replace("text_encoder.", "", 1): v for k, v in state_dict.items() if k.startswith("text_encoder")}
-        
+
         if args.use_ema:
             # rebuild unet from weights
             from diffusers import UNet2DConditionModel
@@ -338,6 +338,6 @@ if __name__ == "__main__":
     state_dict = {**unet_state_dict, **vae_state_dict, **text_enc_dict} if not args.unet_only else {**unet_state_dict}
     if args.half:
         state_dict = {k: v.half() for k, v in state_dict.items()}
-        
+
     state_dict = {k: v.contiguous().to_dense() for k, v in state_dict.items()}
     save_file(state_dict, args.dst)
