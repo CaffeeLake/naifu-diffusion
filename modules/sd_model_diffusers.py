@@ -24,19 +24,22 @@ class StableDiffusionModel(pl.LightningModule):
         trainer_cfg = self.config.trainer
         config = self.config
         advanced = config.get("advanced", {})
-        
+
         logger.info(f"Loading model from {self.model_path}")
         p = StableDiffusionPipeline
         if Path(self.model_path).is_file():
             self.pipeline = pipeline = p.from_single_file(self.model_path)
         else:
             self.pipeline = pipeline = p.from_pretrained(self.model_path)
-            
+
         self.vae, self.unet = pipeline.vae, pipeline.unet
         self.text_encoder, self.tokenizer = (
             pipeline.text_encoder,
             pipeline.tokenizer,
         )
+
+        self.safety_checker, self.feature_extractor = pipeline.safety_checker, pipeline.feature_extractor
+
         self.max_prompt_length = 225 + 2
         self.vae.requires_grad_(False)
         self.text_encoder.requires_grad_(False)
@@ -62,14 +65,14 @@ class StableDiffusionModel(pl.LightningModule):
         self.vae_encode_bsz = self.config.get("vae_encode_batch_size", self.batch_size)
         if self.vae_encode_bsz < 0:
             self.vae_encode_bsz = self.batch_size
-        
+
         if advanced.get("zero_terminal_snr", False):
             apply_zero_terminal_snr(self.noise_scheduler)
         cache_snr_values(self.noise_scheduler, self.target_device)
 
     def get_module(self):
         return self.unet
-    
+
     def encode_pixels(self, inputs):
         feed_pixel_values = inputs
         latents = []
@@ -81,15 +84,15 @@ class StableDiffusionModel(pl.LightningModule):
         latents = latents * self.vae.config.scaling_factor
         return latents
 
-    def encode_prompts(self, prompts):   
-        self.text_encoder.to(self.target_device)         
+    def encode_prompts(self, prompts):
+        self.text_encoder.to(self.target_device)
         input_ids = self.tokenizer(
-            prompts, 
-            padding="max_length", 
-            truncation=True, 
+            prompts,
+            padding="max_length",
+            truncation=True,
             max_length=self.max_token_length,
             return_tensors="pt"
-        ).input_ids 
+        ).input_ids
         tokenizer_max_length = self.tokenizer.model_max_length
         oids = []
         for iids in input_ids:
@@ -103,21 +106,21 @@ class StableDiffusionModel(pl.LightningModule):
                 ids_chunk = torch.cat(ids_chunk)
                 z.append(ids_chunk)
             oids.append(torch.stack(z))
-            
+
         oids = torch.stack(oids)
         bs = oids.size(0)
         input_ids = oids.reshape((-1, tokenizer_max_length))
-        
+
         state = self.text_encoder(input_ids.to(self.target_device), output_hidden_states=True)
         encoder_hidden_states = state['hidden_states'][-self.config.trainer.clip_skip]
         if self.config.trainer.clip_skip > 1:
             encoder_hidden_states = self.text_encoder.text_model.final_layer_norm(encoder_hidden_states)
-        
+
         encoder_hidden_states = encoder_hidden_states.reshape((bs, -1, encoder_hidden_states.shape[-1]))
         states_list = [encoder_hidden_states[:, 0].unsqueeze(1)]  # <BOS>
         for i in range(1, self.max_token_length, tokenizer_max_length):
-            states_list.append(encoder_hidden_states[:, i : i + tokenizer_max_length - 2])  
-            
+            states_list.append(encoder_hidden_states[:, i : i + tokenizer_max_length - 2])
+
         states_list.append(encoder_hidden_states[:, -1].unsqueeze(1))  # <EOS>
         encoder_hidden_states = torch.cat(states_list, dim=1)
         return encoder_hidden_states
@@ -137,7 +140,7 @@ class StableDiffusionModel(pl.LightningModule):
 
         if config.use_wandb and logger and "CSVLogger" != logger.__class__.__name__:
             logger.log_image(key="samples", images=images, caption=prompts, step=global_step)
-            
+
     @torch.inference_mode()
     def sample(
         self,
@@ -150,7 +153,7 @@ class StableDiffusionModel(pl.LightningModule):
     ):
         height, width = size
         height = max(64, height - height % 8)  # round to divisible by 8
-        width = max(64, width - width % 8) 
+        width = max(64, width - width % 8)
         size = (height, width)
         self.vae.to(self.target_device)
         scheduler = DDIMScheduler(
@@ -162,9 +165,11 @@ class StableDiffusionModel(pl.LightningModule):
         pipeline = StableDiffusionPipeline(
             unet=self.unet,
             vae=self.vae,
-            text_encoder_1=self.text_encoder_1,
-            text_encoder_2=self.text_encoder_2,
-            noise_scheduler=scheduler,
+            text_encoder=self.text_encoder,
+            scheduler=scheduler,
+            tokenizer=self.tokenizer,
+            safety_checker=self.safety_checker,
+            feature_extractor=self.feature_extractor,
         )
         image = pipeline(
             prompt=prompt,

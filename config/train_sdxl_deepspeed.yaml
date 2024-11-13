@@ -2,12 +2,12 @@ name: test-run
 target: modules.train_sdxl.setup
 
 trainer:
-  model_path: ../test.safetensors
-  batch_size: 4
-  seed: 1138
-  wandb_id: ""
-  use_xformers: false
-  accumulate_grad_batches: 1
+  model_path: ../stable-diffusion-xl-base-1.0/sd_xl_base_1.0.safetensors
+  batch_size: 2
+  seed: 65535
+  wandb_id: "train_sdxl"
+  use_xformers: true
+  accumulate_grad_batches: 2
   gradient_clip_val: 0.0
 
   save_format: safetensors
@@ -15,7 +15,7 @@ trainer:
   checkpoint_freq: 1
   checkpoint_steps: -1
   save_weights_only: true
-  max_epochs: 60
+  max_epochs: 10
   max_steps: -1
 
 advanced:
@@ -32,44 +32,44 @@ advanced:
   timestep_end: 1000
   v_parameterization: false
   zero_terminal_snr: false
-  
+
 lightning:
   accelerator: gpu
   devices: -1
   strategy: common.deepspeed._sdxl_strategy
-  precision: bf16
+  precision: bf16-mixed
 
 dataset:
   name: data.bucket.AdaptiveSizeDataset
-  target_area: 1_048_576 # 1024*1024
-  img_path: "/storage/dev/nyanko/cc"
+  target_area: 262_144 # 1024*1024
+  min_size: 512
+  max_size: 512
+  img_path: ../stable-diffusion-xl-base-1.0/sd_xl_base_1.0.safetensors
   # process_batch_fn: data.processors.shuffle_prompts_sdstyle
   max_token_length: 225 # [75, 150, 225]
 
 optimizer:
-  name: torch.optim.AdamW
+  name: bitsandbytes.optim.PagedLion8bit
   params:
     lr: 5e-6
     weight_decay: 1e-2
 
 scheduler:
-  name: transformers.get_constant_schedule_with_warmup
+  name: transformers.get_cosine_with_hard_restarts_schedule_with_warmup
   params:
-    num_warmup_steps: 0
+    num_warmup_steps: 394
+    num_training_steps: 3948
+    num_cycles: 2
     last_epoch: -1
 
 sampling:
   enabled: false
   use_wandb: true
-  seed: 1234
-  height: 1280
-  width: 768
+  seed: 65535
+  height: 512
+  width: 512
   every_n_steps: -1
   every_n_epochs: 1
   save_dir: "samples"
-  prompts: 
-    - "best quality, a girl with a yellow hat and a yellow shirt, sitting, white legwear, uniform, jacket, thighhighs, bare shoulders, high contrast, paint splatter"
-    - "best quality, 1girl, solo, loli, cat girl, silver hair ,blue eyes, flat chest, solo, beautiful detailed background, messy hair, long hair"
-    - "masterpiece, best quality, 1girl, solo,loli,wedding dress|see-through highleg leotard, veil, elbow gloves, white thighhighs, crown, earrings, bow on waist, sideboob, lace,"
-    - "1girl, solo, shirt, thighhighs, skirt, hands on hips, white shirt, crystal, flandre scarlet, blonde hair, grey skirt, red bow, red eyes, black thighhighs, wings, white background,"
-    - "1girl,sitting,fantasy,masterpiece,best quality,(long blonde hair),(blue eyes),(floating hair),(black ribbed sweater:1.1),(red plaid skirt:1.1),(cat ears)"
+  prompts:
+    - "9, u000039, M+1"
