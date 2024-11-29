@@ -8,9 +8,8 @@ from torchvision import transforms
 class PairedDataset(torch.utils.data.Dataset):
     def __init__(self, config):
         self.dataset = load_dataset(
-            path=config.dataset.name,
-            name=None,
-            cache_dir=config.dataset.get("cache_dir", None),
+            "parquet",
+            data_files=config.dataset.name,
         )[config.dataset.dataset_split]
         self.dataset = self.dataset.with_transform(self.preprocess_train)
         self.reso = config.dataset.resolution
@@ -86,7 +85,7 @@ def setup_hf_dataloader(config):
         train_dataset,
         collate_fn=collate_fn,
         batch_size=config.trainer.batch_size,
-        num_workers=4,
+        num_workers=8,
         drop_last=True,
         shuffle=True,
     )
