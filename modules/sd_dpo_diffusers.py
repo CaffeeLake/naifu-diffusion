@@ -17,6 +17,8 @@ def setup(fabric: pl.Fabric, config: OmegaConf) -> tuple:
     model = SupervisedFineTune(
         model_path=model_path, config=config, device=fabric.device
     )
+    model._fabric = fabric
+
     dataset, dataloader = setup_hf_dataloader(config)
 
     params_to_optim = [{"params": model.unet.parameters()}]
@@ -40,7 +42,7 @@ def setup(fabric: pl.Fabric, config: OmegaConf) -> tuple:
     model.unet, optimizer = fabric.setup(model.unet, optimizer)
     if config.advanced.get("train_text_encoder") or config.advanced.get("train_text_encoder"):
         model.text_encoder = fabric.setup(model.text_encoder)
-        
+
     dataloader = fabric.setup_dataloaders(dataloader)
     return model, dataset, dataloader, optimizer, scheduler
 
@@ -52,11 +54,11 @@ class SupervisedFineTune(StableDiffusionModel):
         self.unet_ref = copy.deepcopy(self.unet)
         self.unet_ref.eval().requires_grad_(False)
         # since we're in dpo, unet_ref in 16bit is ok
-        self.unet_ref.to(torch.float16)
+        self.unet_ref.to(torch.float16).to(self.target_device)
 
     def forward(self, batch):
         advanced = self.config.get("advanced", {})
-        
+
         self.vae.to(self.target_device)
         feed_pixel_values = torch.cat(batch["pixels"].chunk(2, dim=1))
         latents = self.encode_pixels(feed_pixel_values)
@@ -114,10 +116,11 @@ class SupervisedFineTune(StableDiffusionModel):
         model_diff = model_losses_w - model_losses_l  # These are both LBS (as is t)
 
         with torch.no_grad():
+            ref_d = next(self.unet_ref.parameters()).dtype
             ref_preds = self.unet_ref(
-                sample=noisy_latents,
+                sample=noisy_latents.to(ref_d),
                 timestep=timesteps,
-                encoder_hidden_states=hidden_states,
+                encoder_hidden_states=hidden_states.to(ref_d),
             ).sample
 
             ref_loss = F.mse_loss(ref_preds.float(), target.float(), reduction="none")
@@ -132,7 +135,7 @@ class SupervisedFineTune(StableDiffusionModel):
 
         implicit_acc = (inside_term > 0).sum().float() / inside_term.size(0)
         implicit_acc += 0.5 * (inside_term == 0).sum().float() / inside_term.size(0)
-        self.fabric.log_dict(
+        self._fabric.log_dict(
             {
                 "loss": loss.detach().item(),
                 "raw_model_loss": raw_model_loss.detach().item(),
